@@ -1,0 +1,8 @@
+<%- include('header') -%>
+<h1>Hello</h1>
+<form action="/contacts" method="get" class="tool-bar">
+  <label for="search">Search Term</label>
+  <input id="search" type="search" name="q" value="<%= p %>" />
+
+  <input type="submit" value="Search" />
+</form><%- include('footer') -%>
