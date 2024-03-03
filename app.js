@@ -50,7 +50,7 @@ app.get('/contacts', (req, res) => {
     } else {
         data = contacts;
     }
-    res.render('contacts', { contacts: data });
+    res.render('contacts', { contacts: data, messages: flashes?.info || [] });
 });
 app.get('/contacts/new', (req, res) => {
     return res.render('contacts/new', { contact: new Contact() });
