@@ -56,6 +56,13 @@ app.get('/contacts', (req, res) => {
 app.get('/contacts/new', (req, res) => {
     return res.render('contacts/new', { contact: new Contact() });
 });
+app.get('/contacts/:id/edit', (req, res) => {
+    const contact = contacts.find((c) => c.id === req.params.id);
+    if (!contact) {
+        return res.status(404).send('Contact not found');
+    }
+    return res.render('contacts/edit', { contact: contact });
+});
 app.get('/contacts/:id', (req, res) => {
     const contact = contacts.find((c) => c.id === req.params.id);
     if (!contact) {
