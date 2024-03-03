@@ -7,18 +7,20 @@
         "htmx ejs"
     ],
     "license": "uni",
-    "main": "index.js",
+    "main": "app.js",
     "repository": {
         "type": "git",
         "url": "https://github.com/georgernstgraf/hypermedia.systems.git"
     },
     "scripts": {
-        "start": "node --watch --inspect index.js",
+        "start": "node --watch --inspect app.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
         "ejs": "^3.1.9",
         "express": "^4.18.3",
+        "express-flash": "^0.0.2",
+        "express-session": "^1.18.0",
         "http-errors": "^2.0.0",
         "pino": "^8.19.0",
         "pino-http": "^9.0.0",

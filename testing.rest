@@ -1,0 +1,6 @@
+###
+POST http://localhost:1234/contacts/new
+Content-Type: application/x-www-form-urlencoded
+
+email=asdf%40example.com&first_name=asdf&last_name=asdf&phone=asdf
+
