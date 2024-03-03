@@ -1,6 +1,6 @@
 const { fakerDE } = require('@faker-js/faker');
 const persons = [];
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 108; i++) {
     persons.push({
         id: fakerDE.string.uuid(),
         first: fakerDE.person.firstName(),

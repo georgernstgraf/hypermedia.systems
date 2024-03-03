@@ -52,9 +52,18 @@ app.get('/contacts', (req, res) => {
     }
     res.render('contacts', { contacts: data, messages: flashes?.info || [] });
 });
+
 app.get('/contacts/new', (req, res) => {
     return res.render('contacts/new', { contact: new Contact() });
 });
+app.get('/contacts/:id', (req, res) => {
+    const contact = contacts.find((c) => c.id === req.params.id);
+    if (!contact) {
+        return res.status(404).send('Contact not found');
+    }
+    return res.render('contacts/view', { contact: contact });
+});
+
 app.post(
     '/contacts/new',
     express.urlencoded({ extended: true }),
