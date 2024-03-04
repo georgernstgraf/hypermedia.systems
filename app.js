@@ -30,10 +30,10 @@ const contacts = JSON.parse(fs.readFileSync('contacts.json', 'utf8')).map(
 // Error handlers
 app.set('view engine', 'ejs');
 app.get('/', (req, res) => {
-    if (!req.query.p) {
-        req.query.p = 'search!';
-    }
-    res.render('index', req.query);
+    const flashes = req.session.flash;
+    delete req.session.flash;
+    const options = { p: req.query.p || 'search!', flashes: flashes };
+    res.render('index', options);
 });
 app.get('/contacts', (req, res) => {
     const flashes = req.session.flash;
@@ -50,47 +50,91 @@ app.get('/contacts', (req, res) => {
     } else {
         data = contacts;
     }
-    res.render('contacts', { contacts: data, messages: flashes?.info || [] });
+    res.render('contacts', { contacts: data, flashes: flashes });
 });
 
 app.get('/contacts/new', (req, res) => {
-    return res.render('contacts/new', { contact: new Contact() });
+    const flashes = req.session.flash;
+    delete req.session.flash;
+    return res.render('contacts/new', {
+        contact: new Contact(),
+        flashes: flashes,
+        errors: {},
+    });
 });
 app.get('/contacts/:id/edit', (req, res) => {
     const contact = contacts.find((c) => c.id === req.params.id);
     if (!contact) {
         return res.status(404).send('Contact not found');
     }
-    return res.render('contacts/edit', { contact: contact });
+    const flashes = req.session.flash;
+    delete req.session.flash;
+    return res.render('contacts/edit', {
+        contact: contact,
+        errors: {},
+        flashes: flashes,
+    });
 });
+app.post(
+    '/contacts/:id/edit',
+    express.urlencoded({ extended: true }),
+    (req, res) => {
+        const flashes = req.session.flash;
+        delete req.session.flash;
+        const contact = contacts.find((c) => c.id === req.params.id);
+        if (!contact) {
+            return res.status(404).send('Contact not found');
+        }
+        try {
+            contact.update(req.body);
+            req.flash('info', 'Updated Contact!');
+            return res.redirect('/contacts/' + contact.id);
+        } catch (e) {
+            req.flash('error', e.message);
+            return res.render('contacts/edit', {
+                contact: contact,
+                errors: e.details || {},
+                flashes: flashes,
+            });
+        }
+    }
+);
 app.get('/contacts/:id', (req, res) => {
+    const flashes = req.session.flash;
+    delete req.session.flash;
     const contact = contacts.find((c) => c.id === req.params.id);
     if (!contact) {
         return res.status(404).send('Contact not found');
     }
-    return res.render('contacts/view', { contact: contact });
+    return res.render('contacts/view', { contact: contact, flashes: flashes });
 });
 
 app.post(
     '/contacts/new',
     express.urlencoded({ extended: true }),
     (req, res) => {
-        const c = new Contact({
-            id: null,
-            first: req.body['first_name'],
-            last: req.body['last_name'],
-            phone: req.body['phone'],
-            email: req.body['email'],
-        });
-        //
-        if (c.first.includes('err')) {
-            c.errors.first = 'First name cannot contain "err"';
-            return res.render('contacts/new', { contact: c });
+        const flashes = req.session.flash;
+        delete req.session.flash;
+        let newContact;
+        try {
+            newContact = new Contact({
+                id: null,
+                first: req.body['first'],
+                last: req.body['last'],
+                phone: req.body['phone'],
+                email: req.body['email'],
+            });
+            newContact.addSelf(contacts);
+            req.flash('info', 'Created New Contact!');
+            return res.redirect('/contacts');
+        } catch (e) {
+            req.flash('error', e.message);
+            return res.render('contacts/new', {
+                contact: newContact,
+                errors: e.details,
+                flashes: flashes,
+            });
         }
-        // no error here
-        contacts.push(c);
-        req.flash('info', 'Created New Contact!');
-        return res.redirect('/contacts');
     }
 );
 ///////////////////////////////////////////////////////////////
