@@ -2,6 +2,7 @@
 const express = require('express');
 // Create the express app
 const app = express();
+const { prisma } = require('./lib/prisma');
 
 const session = require('express-session');
 const flash = require('express-flash');
@@ -19,11 +20,8 @@ app.use(
 );
 app.use(flash());
 
-const fs = require('fs');
 const { Contact } = require('./lib/contact');
-const contacts = JSON.parse(fs.readFileSync('contacts.json', 'utf8')).map(
-    (_) => new Contact(_)
-);
+
 // Routes and middleware
 // app.use(/* ... */)
 // app.get(/* ... */)
@@ -32,24 +30,28 @@ app.set('view engine', 'ejs');
 app.get('/', (req, res) => {
     const flashes = req.session.flash;
     delete req.session.flash;
-    const options = { p: req.query.p || 'search!', flashes: flashes };
+    const options = { p: req.query.p || 'eli', flashes: flashes };
     res.render('index', options);
 });
-app.get('/contacts', (req, res) => {
+app.get('/contacts', async (req, res) => {
     const flashes = req.session.flash;
     delete req.session.flash;
     let data;
     if (req.query.q) {
         const q = req.query.q.toLowerCase();
-        data = contacts.filter(
-            (c) =>
-                c.first.toLowerCase().includes(q) ||
-                c.last.toLowerCase().includes(q) ||
-                c.email.includes(q)
-        );
+        data = await prisma.contact.findMany({
+            where: {
+                OR: [
+                    { email: { contains: q } },
+                    { first: { contains: q } },
+                    { last: { contains: q } },
+                ],
+            },
+        });
     } else {
-        data = contacts;
+        data = await prisma.contact.findMany();
     }
+    data = data.map((c) => new Contact(c));
     res.render('contacts', { contacts: data, flashes: flashes });
 });
 
@@ -62,15 +64,17 @@ app.get('/contacts/new', (req, res) => {
         errors: {},
     });
 });
-app.get('/contacts/:id/edit', (req, res) => {
-    const contact = contacts.find((c) => c.id === req.params.id);
+app.get('/contacts/:id/edit', async (req, res) => {
+    const contact = await prisma.contact.findUnique({
+        where: { id: req.params.id },
+    });
     if (!contact) {
         return res.status(404).send('Contact not found');
     }
     const flashes = req.session.flash;
     delete req.session.flash;
     return res.render('contacts/edit', {
-        contact: contact,
+        contact: new Contact(contact),
         errors: {},
         flashes: flashes,
     });
@@ -78,15 +82,19 @@ app.get('/contacts/:id/edit', (req, res) => {
 app.post(
     '/contacts/:id/edit',
     express.urlencoded({ extended: true }),
-    (req, res) => {
+    async (req, res) => {
         const flashes = req.session.flash;
         delete req.session.flash;
-        const contact = contacts.find((c) => c.id === req.params.id);
+        let contact = await prisma.contact.findUnique({
+            where: { id: req.params.id },
+        });
         if (!contact) {
             return res.status(404).send('Contact not found');
         }
         try {
+            contact = new Contact(contact);
             contact.update(req.body);
+            await contact.save();
             req.flash('info', 'Updated Contact!');
             return res.redirect('/contacts/' + contact.id);
         } catch (e) {
@@ -94,37 +102,41 @@ app.post(
             return res.render('contacts/edit', {
                 contact: contact,
                 errors: e.details || {},
-                flashes: flashes,
+                flashes: { error: [e.message] },
             });
         }
     }
 );
-app.get('/contacts/:id', (req, res) => {
+app.get('/contacts/:id', async (req, res) => {
     const flashes = req.session.flash;
     delete req.session.flash;
-    const contact = contacts.find((c) => c.id === req.params.id);
+    const contact = await prisma.contact.findUnique({
+        where: { id: req.params.id },
+    });
     if (!contact) {
         return res.status(404).send('Contact not found');
     }
-    return res.render('contacts/view', { contact: contact, flashes: flashes });
+    return res.render('contacts/view', {
+        contact: new Contact(contact),
+        flashes: flashes,
+    });
 });
 
 app.post(
     '/contacts/new',
     express.urlencoded({ extended: true }),
-    (req, res) => {
+    async (req, res) => {
         const flashes = req.session.flash;
         delete req.session.flash;
-        let newContact;
+        let newContact = new Contact();
         try {
-            newContact = new Contact({
-                id: null,
+            newContact.update({
                 first: req.body['first'],
                 last: req.body['last'],
                 phone: req.body['phone'],
                 email: req.body['email'],
             });
-            newContact.addSelf(contacts);
+            newContact.save();
             req.flash('info', 'Created New Contact!');
             return res.redirect('/contacts');
         } catch (e) {

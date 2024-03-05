@@ -126,3 +126,5 @@ dist
 .yarn/install-state.gz
 .pnp.*
 contacts.json
+prisma/dev.db
+prisma/dev.sqlite3

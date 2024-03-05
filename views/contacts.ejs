@@ -1,5 +1,4 @@
 <%- include('header') -%>
-
     <table>
         <thead>
             <tr>
@@ -7,11 +6,12 @@
                 <th>Last</th>
                 <th>Phone</th>
                 <th>Email</th>
+                <th>#</th>
                 <th></th>
             </tr>
         </thead>
         <tbody>
-            <% for( let contact of contacts ) { %>
+            <% let i=1; for( let contact of contacts ) { %>
                 <tr>
                     <td>
                         <%= contact.first %>
@@ -26,11 +26,14 @@
                         <%= contact.email %>
                     </td>
                     <td>
+                        <%= i.toString().padStart(3, '0' ) %>
+                    </td>
+                    <td>
                         <a href="/contacts/<%= contact.id %>/edit">Edit</a>
                         <a href="/contacts/<%= contact.id %>">View</a>
                     </td>
                 </tr>
-                <% } %>
+                <% i++ } %>
         </tbody>
     </table>
     <p>
