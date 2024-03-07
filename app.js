@@ -128,22 +128,16 @@ app.post(
     async (req, res) => {
         const flashes = req.session.flash;
         delete req.session.flash;
-        let newContact = new Contact();
+        let newContact = Contact.fromForm(req.body); // should not throw in any case ;)
         try {
-            newContact.update({
-                first: req.body['first'],
-                last: req.body['last'],
-                phone: req.body['phone'],
-                email: req.body['email'],
-            });
-            newContact.save();
+            newContact.save(); // this throws!!
             req.flash('info', 'Created New Contact!');
             return res.redirect('/contacts');
         } catch (e) {
             req.flash('error', e.message);
-            return res.render('contacts/new', {
+            return res.render('/contacts/new', {
                 contact: newContact,
-                errors: e.details,
+                errors: e.details || {},
                 flashes: flashes,
             });
         }
