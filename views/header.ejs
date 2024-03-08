@@ -8,15 +8,13 @@
 </head>
 
 <body>
-  <% for( let msgType in flashes ) { %>
-    <div class="flashes">
+  <div class="flashes">
+    <% for( let msgType in flashes ) { %>
       <p>
         <%= msgType %>
+          <% for( let msg of flashes[msgType] ) { %>
+            <%= msg %>
+              <% } %>
       </p>
-      <% for( let msg of flashes[msgType] ) { %>
-        <p>
-          <%= msg %>
-        </p>
-        <% } %>
-    </div>
-    <% } %>
+      <% } %>
+  </div>

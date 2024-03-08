@@ -3,7 +3,6 @@ const express = require('express');
 // Create the express app
 const app = express();
 const { prisma } = require('./lib/prisma');
-
 const session = require('express-session');
 const flash = require('express-flash');
 app.use(
@@ -19,9 +18,7 @@ app.use(
     })
 );
 app.use(flash());
-
 const { Contact } = require('./lib/contact');
-
 // Routes and middleware
 // app.use(/* ... */)
 // app.get(/* ... */)
@@ -51,31 +48,31 @@ app.get('/contacts', async (req, res) => {
     } else {
         data = await prisma.contact.findMany();
     }
-    data = data.map((c) => new Contact(c));
+    data = data.map((c) => new Contact(c, true));
     res.render('contacts', { contacts: data, flashes: flashes });
 });
-
 app.get('/contacts/new', (req, res) => {
     const flashes = req.session.flash;
     delete req.session.flash;
-    return res.render('contacts/new', {
+    return res.render('contacts/edit', {
         contact: new Contact(),
         flashes: flashes,
-        errors: {},
     });
 });
 app.get('/contacts/:id/edit', async (req, res) => {
-    const contact = await prisma.contact.findUnique({
-        where: { id: req.params.id },
-    });
+    const contact = new Contact(
+        await prisma.contact.findUnique({
+            where: { id: req.params.id },
+        }),
+        true
+    );
     if (!contact) {
         return res.status(404).send('Contact not found');
     }
     const flashes = req.session.flash;
     delete req.session.flash;
     return res.render('contacts/edit', {
-        contact: new Contact(contact),
-        errors: {},
+        contact: contact,
         flashes: flashes,
     });
 });
@@ -85,23 +82,25 @@ app.post(
     async (req, res) => {
         const flashes = req.session.flash;
         delete req.session.flash;
-        let contact = await prisma.contact.findUnique({
-            where: { id: req.params.id },
-        });
+        let contact = new Contact(
+            await prisma.contact.findUnique({
+                where: { id: req.params.id },
+            }),
+            true
+        );
         if (!contact) {
             return res.status(404).send('Contact not found');
         }
         try {
-            contact = new Contact(contact);
+            contact = new Contact(contact, true);
             contact.update(req.body);
             await contact.save();
             req.flash('info', 'Updated Contact!');
             return res.redirect('/contacts/' + contact.id);
         } catch (e) {
             req.flash('error', e.message);
-            return res.render('contacts/edit', {
+            return res.render(`contacts/edit`, {
                 contact: contact,
-                errors: e.details || {},
                 flashes: { error: [e.message] },
             });
         }
@@ -117,32 +116,42 @@ app.get('/contacts/:id', async (req, res) => {
         return res.status(404).send('Contact not found');
     }
     return res.render('contacts/view', {
-        contact: new Contact(contact),
+        contact: new Contact(contact, true),
         flashes: flashes,
     });
 });
-
 app.post(
     '/contacts/new',
     express.urlencoded({ extended: true }),
     async (req, res) => {
         const flashes = req.session.flash;
         delete req.session.flash;
-        let newContact = Contact.fromForm(req.body); // should not throw in any case ;)
+        let newContact = new Contact(req.body, false); // should not throw in any case ;)
         try {
             newContact.save(); // this throws!!
             req.flash('info', 'Created New Contact!');
             return res.redirect('/contacts');
         } catch (e) {
             req.flash('error', e.message);
-            return res.render('/contacts/new', {
+            return res.render('/contacts/edit', {
                 contact: newContact,
-                errors: e.details || {},
                 flashes: flashes,
             });
         }
     }
 );
+app.post('/contacts/:id/delete', async (req, res) => {
+    delete req.session.flash;
+    try {
+        await prisma.contact.delete({
+            where: { id: req.params.id },
+        });
+        req.flash('info', 'Deleted Contact!');
+    } catch (e) {
+        req.flash('error', e.message);
+    }
+    return res.redirect('/contacts');
+});
 ///////////////////////////////////////////////////////////////
 // use the "static" folder for static files
 app.use('/', express.static('static'));
